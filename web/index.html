@@ -17,11 +17,11 @@
       <div class="stats">
         <div class="stat">
           <span class="label">Collector</span>
-          <strong>127.0.0.1:6343</strong>
+          <strong id="collector-addr">-</strong>
         </div>
         <div class="stat">
           <span class="label">Frontend</span>
-          <strong>127.0.0.1:8080</strong>
+          <strong id="frontend-addr">-</strong>
         </div>
         <div class="stat">
           <span class="label">Packets Seen</span>
@@ -31,6 +31,30 @@
           <span class="label">Stream</span>
           <strong id="stream-state">connecting</strong>
         </div>
+        <div class="stat">
+          <span class="label">Filter</span>
+          <strong id="filter-name">-</strong>
+        </div>
+        <div class="stat">
+          <span class="label">Blocked Packets</span>
+          <strong id="blocked-count">0</strong>
+        </div>
+        <div class="stat">
+          <span class="label">Dropped Events</span>
+          <strong id="dropped-count">0</strong>
+        </div>
+        <div class="stat">
+          <span class="label">SSH PPS</span>
+          <strong id="ssh-pps">0.0</strong>
+        </div>
+        <div class="stat">
+          <span class="label">SSH Alert</span>
+          <strong id="ssh-alert">normal</strong>
+        </div>
+        <div class="stat">
+          <span class="label">SSH Profile</span>
+          <strong id="ssh-profile-key">-</strong>
+        </div>
       </div>
     </section>
 
@@ -39,7 +63,7 @@
         <h2>Protocol split</h2>
         <p>Counts are grouped by the protocol decoded from the packet carried inside each sFlow raw packet header record.</p>
       </div>
-      <div id="empty-state" class="empty">Waiting for packets. Start `go run .` and send sFlow to `127.0.0.1:6343`.</div>
+      <div id="empty-state" class="empty">Waiting for packets. Start `go run .` and send sFlow to the configured collector address.</div>
       <div class="chart-layout">
         <section class="chart-panel">
           <div id="protocol-chart" class="chart" aria-label="Protocol distribution chart"></div>

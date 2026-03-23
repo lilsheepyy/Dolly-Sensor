@@ -83,7 +83,7 @@ h1 {
 
 .stats {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
   align-content: start;
 }
@@ -283,6 +283,6 @@ h1 {
   }
 
   .legend-item {
-    grid-template-columns: auto 1fr;
+    grid-template-columns: auto 1fr auto auto;
   }
 }

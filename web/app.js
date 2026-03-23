@@ -1,6 +1,14 @@
 const packetCount = document.querySelector("#packet-count");
 const streamState = document.querySelector("#stream-state");
 const emptyState = document.querySelector("#empty-state");
+const collectorAddr = document.querySelector("#collector-addr");
+const frontendAddr = document.querySelector("#frontend-addr");
+const filterName = document.querySelector("#filter-name");
+const blockedCount = document.querySelector("#blocked-count");
+const droppedCount = document.querySelector("#dropped-count");
+const sshPps = document.querySelector("#ssh-pps");
+const sshAlert = document.querySelector("#ssh-alert");
+const sshProfileKey = document.querySelector("#ssh-profile-key");
 const protocolCount = document.querySelector("#protocol-count");
 const dominantProtocol = document.querySelector("#dominant-protocol");
 const topProtocol = document.querySelector("#top-protocol");
@@ -10,6 +18,8 @@ const protocolLegend = document.querySelector("#protocol-legend");
 
 const seenPacketIDs = new Set();
 const protocolTotals = new Map();
+let blockedTotal = 0;
+let latestSSHProfile = null;
 const chartColors = [
   "#7EE0C6",
   "#45B4FF",
@@ -26,15 +36,32 @@ const chartColors = [
 boot();
 
 async function boot() {
+  await loadConfig();
   await loadInitialPackets();
+  await loadStats();
   openStream();
+  window.setInterval(loadStats, 2000);
   renderProtocolChart();
+}
+
+async function loadConfig() {
+  const response = await fetch("/api/config");
+  const cfg = await response.json();
+  collectorAddr.textContent = cfg.collectorAddr || "-";
+  frontendAddr.textContent = cfg.frontendAddr || "-";
+  filterName.textContent = cfg.activeFilters || "-";
 }
 
 async function loadInitialPackets() {
   const response = await fetch("/api/packets");
   const packets = await response.json();
   packets.forEach(registerPacket);
+}
+
+async function loadStats() {
+  const response = await fetch("/api/stats");
+  const stats = await response.json();
+  droppedCount.textContent = String(stats.dropped || 0);
 }
 
 function openStream() {
@@ -63,6 +90,14 @@ function registerPacket(packet) {
   const protocol = packet.protocol || packet.transport || packet.network || "Unknown";
   protocolTotals.set(protocol, (protocolTotals.get(protocol) || 0) + 1);
 
+  if (packet.filterAction === "blocked") {
+    blockedTotal += 1;
+  }
+
+  if (packet.profileActive) {
+    latestSSHProfile = packet;
+  }
+
   renderProtocolChart();
 }
 
@@ -73,6 +108,8 @@ function renderProtocolChart() {
 
   packetCount.textContent = String(total);
   protocolCount.textContent = String(entries.length);
+  blockedCount.textContent = String(blockedTotal);
+  renderSSHProfile();
   emptyState.hidden = total > 0;
 
   if (total === 0) {
@@ -120,6 +157,27 @@ function renderProtocolChart() {
   });
 
   protocolLegend.replaceChildren(...items);
+}
+
+function renderSSHProfile() {
+  if (!latestSSHProfile) {
+    sshPps.textContent = "0.0";
+    sshAlert.textContent = "normal";
+    sshProfileKey.textContent = "-";
+    return;
+  }
+
+  sshPps.textContent = `${formatRate(latestSSHProfile.currentPPS)} pps`;
+  sshProfileKey.textContent = latestSSHProfile.destinationIsLocal ? (latestSSHProfile.profileKey || "-") : "external dst";
+  if (latestSSHProfile.alert) {
+    sshAlert.textContent = `ddos suspected (${formatRate(latestSSHProfile.baselinePPS)} -> ${formatRate(latestSSHProfile.currentPPS)})`;
+  } else {
+    sshAlert.textContent = `normal (${formatRate(latestSSHProfile.baselinePPS)} baseline)`;
+  }
+}
+
+function formatRate(value) {
+  return Number(value || 0).toFixed(1);
 }
 
 function escapeHtml(value) {
