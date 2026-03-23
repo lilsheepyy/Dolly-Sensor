@@ -104,6 +104,9 @@ Example:
 
 ## Notes
 
+- This project is made with AI, reviewed by me.
 - This project consumes sFlow; it does not sniff raw host interfaces directly.
 - SSH traffic profiling is in-memory only and resets on restart.
 - FlowSpec commands are executed through the configured external command template.
+
+# Any pulls are welcome, thanks for reading, using or developing this!
