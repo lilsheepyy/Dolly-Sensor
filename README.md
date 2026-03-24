@@ -1,4 +1,6 @@
 # Dolly Sensor
+<img width="1859" height="958" alt="imagen" src="https://github.com/user-attachments/assets/134c41ba-5565-43e4-86a2-d87ee31b38b5" />
+
 
 Go-based sFlow collector focused on inbound DDoS visibility.
 
