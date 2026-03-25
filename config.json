@@ -58,7 +58,8 @@
     "active": [
       "ssh",
       "dnsamp",
-      "ntpamp"
+      "ntpamp",
+      "ftp"
     ]
   }
 }
