@@ -23,7 +23,7 @@ func (b *blockerStub) RateLimit(_ context.Context, match flowspec.Match, _ int) 
 	return nil
 }
 
-func TestSSHFilterBlocksNonTCPBySourceIPOnly(t *testing.T) {
+func TestSSHFilterAllowsAnyProtocolOnDestinationPort22(t *testing.T) {
 	stub := &blockerStub{}
 	_, ownedNet, err := net.ParseCIDR("192.168.1.0/24")
 	if err != nil {
@@ -39,14 +39,11 @@ func TestSSHFilterBlocksNonTCPBySourceIPOnly(t *testing.T) {
 		DstPort:   22,
 	})
 
-	if decision.Allowed {
-		t.Fatalf("expected packet to be blocked")
+	if !decision.Allowed {
+		t.Fatalf("expected packet to be allowed")
 	}
-	if len(stub.blockCalls) != 1 {
-		t.Fatalf("expected one block call, got %d", len(stub.blockCalls))
-	}
-	if stub.blockCalls[0].IncludeSourcePort {
-		t.Fatalf("ssh block should not include source port")
+	if len(stub.blockCalls) != 0 {
+		t.Fatalf("expected no block call, got %d", len(stub.blockCalls))
 	}
 }
 

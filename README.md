@@ -16,6 +16,7 @@ It receives sFlow v5 datagrams, decodes the inner packet headers carried in `FLO
   - `dnsamp`
   - `ntpamp`
   - `ftp`
+  - `inbound`
 - Optionally issues BGP FlowSpec actions through an external CLI such as `gobgp`
 - Serves a dashboard over HTTP
 
@@ -85,7 +86,8 @@ Example:
       "ssh",
       "dnsamp",
       "ntpamp",
-      "ftp"
+      "ftp",
+      "inbound"
     ]
   }
 }
@@ -94,9 +96,9 @@ Example:
 ## Filter Behavior
 
 - `ssh`
-  - applies only to `dst port 22`
-  - non-TCP to `dst port 22` is blocked
-  - if a single `source IP + source port` exceeds `6000 pps`, a FlowSpec rate-limit can be requested
+  - applies to all inbound packets with `dst port 22`
+  - uses per-destination-IP Z-Score anomaly detection over PPS
+  - destination profiles are persisted to `data/ssh_profiles.json`
 - `dnsamp`
   - applies only to packets with `src port 53`
   - trusted resolver IPs are allowed
@@ -109,12 +111,17 @@ Example:
   - applies only to incoming packets with `dst port 21`
   - non-TCP packets to `dst port 21` are blocked by source IP
   - packets to `dst port 21` with `src port` in `1-1024` are blocked by source IP
+- `inbound`
+  - applies to all inbound packets to owned destination IPs
+  - keeps a per-destination global profile with pps and mbps mean/deviation
+  - tracks dominant protocols per destination profile
+  - emits anomaly alerts when pps or mbps Z-Score exceeds threshold
 
 ## Notes
 
 - This project is made with AI, reviewed by me.
 - This project consumes sFlow; it does not sniff raw host interfaces directly.
-- SSH traffic profiling is in-memory only and resets on restart.
+- SSH traffic profiling is persisted to `data/ssh_profiles.json` and restored on restart.
 - FlowSpec commands are executed through the configured external command template.
 
 # Any pulls are welcome, thanks for reading, using or developing this!

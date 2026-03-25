@@ -393,6 +393,8 @@ func (p *Processor) applyFilters(pkt *packet.Event) {
 		SrcPort:   pkt.SrcPort,
 		DstIP:     pkt.DstIP,
 		Transport: pkt.Transport,
+		Protocolo: pkt.BestProtocol(),
+		Bytes:     pkt.FrameLength,
 		DstPort:   pkt.DstPort,
 	}
 

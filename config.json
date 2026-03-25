@@ -59,7 +59,8 @@
       "ssh",
       "dnsamp",
       "ntpamp",
-      "ftp"
+      "ftp",
+      "inbound"
     ]
   }
 }
