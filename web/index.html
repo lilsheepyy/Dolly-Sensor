@@ -12,15 +12,13 @@
       <div>
         <p class="eyebrow">sFlow collector</p>
         <h1>DDoS inbound global profile</h1>
-        <p class="subtitle">Collector listens on 127.0.0.1:6343 and builds baseline per owned destination IP with PPS/mbps averages, deviations, protocols and alert signals.</p>
+        <p class="subtitle">Reads sFlow datagrams from 127.0.0.1:6343 and builds a global baseline per owned destination IP.</p>
       </div>
       <div class="stats">
         <div class="stat"><span class="label">Collector</span><strong id="collector-addr">-</strong></div>
         <div class="stat"><span class="label">Frontend</span><strong id="frontend-addr">-</strong></div>
         <div class="stat"><span class="label">Packets Seen</span><strong id="packet-count">0</strong></div>
         <div class="stat"><span class="label">Stream</span><strong id="stream-state">connecting</strong></div>
-        <div class="stat"><span class="label">Filter</span><strong id="filter-name">-</strong></div>
-        <div class="stat"><span class="label">Blocked</span><strong id="blocked-count">0</strong></div>
         <div class="stat"><span class="label">Inbound Alerts</span><strong id="inbound-alert-count">0</strong></div>
         <div class="stat"><span class="label">Dropped Events</span><strong id="dropped-count">0</strong></div>
       </div>
@@ -29,9 +27,9 @@
     <section class="panel">
       <div class="panel-head">
         <h2>Global profile per owned destination IP</h2>
-        <p>Values are learned from sFlow packet headers decoded in real time.</p>
+        <p>Average Mbps/PPS, deviations and top protocols.</p>
       </div>
-      <div id="empty-state" class="empty">Waiting for packets. Start <code>go run .</code> and send sFlow datagrams to 127.0.0.1:6343.</div>
+      <div id="empty-state" class="empty">Waiting for packets. Send sFlow datagrams to 127.0.0.1:6343.</div>
       <div class="table-wrap">
         <table>
           <thead>

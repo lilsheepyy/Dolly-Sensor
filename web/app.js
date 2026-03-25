@@ -3,14 +3,11 @@ const estadoFlujo = document.querySelector("#stream-state");
 const estadoVacio = document.querySelector("#empty-state");
 const direccionCollector = document.querySelector("#collector-addr");
 const direccionFrontend = document.querySelector("#frontend-addr");
-const nombreFiltro = document.querySelector("#filter-name");
-const contadorBloqueados = document.querySelector("#blocked-count");
 const contadorDescartados = document.querySelector("#dropped-count");
 const contadorAlertas = document.querySelector("#inbound-alert-count");
 const cuerpoPerfiles = document.querySelector("#profiles-body");
 
 const idsVistos = new Set();
-let totalBloqueados = 0;
 let totalAlertas = 0;
 
 iniciar();
@@ -31,7 +28,6 @@ async function cargarConfiguracion() {
   const configuracion = await respuesta.json();
   direccionCollector.textContent = configuracion.collectorAddr || "-";
   direccionFrontend.textContent = configuracion.frontendAddr || "-";
-  nombreFiltro.textContent = configuracion.activeFilters || "-";
 }
 
 async function cargarPaquetesIniciales() {
@@ -48,10 +44,6 @@ async function cargarEstadisticas() {
 
 async function cargarPerfiles() {
   const respuesta = await fetch("/api/perfiles");
-  if (!respuesta.ok) {
-    return;
-  }
-
   const perfiles = await respuesta.json();
   estadoVacio.hidden = perfiles.length > 0;
 
@@ -75,15 +67,12 @@ async function cargarPerfiles() {
 
 function abrirStream() {
   const eventos = new EventSource("/api/events");
-
   eventos.onopen = () => {
     estadoFlujo.textContent = "live";
   };
-
   eventos.onmessage = (evento) => {
     registrarPaquete(JSON.parse(evento.data));
   };
-
   eventos.onerror = () => {
     estadoFlujo.textContent = "reconnecting";
   };
@@ -94,16 +83,11 @@ function registrarPaquete(paquete) {
     return;
   }
   idsVistos.add(paquete.id);
-
-  if (paquete.filterAction === "blocked") {
-    totalBloqueados += 1;
-  }
   if (paquete.alert) {
     totalAlertas += 1;
   }
 
   contadorPaquetes.textContent = String(idsVistos.size);
-  contadorBloqueados.textContent = String(totalBloqueados);
   contadorAlertas.textContent = String(totalAlertas);
 }
 

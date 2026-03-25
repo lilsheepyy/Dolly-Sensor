@@ -1,4 +1,4 @@
-package filter
+package sflow
 
 import (
 	"math"
@@ -31,11 +31,7 @@ type PerfilZScore struct {
 }
 
 func NuevoPerfilZScore(minMuestras int, umbralZ, minPPS float64) *PerfilZScore {
-	return &PerfilZScore{
-		minMuestras: minMuestras,
-		umbralZ:     umbralZ,
-		minPPS:      minPPS,
-	}
+	return &PerfilZScore{minMuestras: minMuestras, umbralZ: umbralZ, minPPS: minPPS}
 }
 
 func (p *PerfilZScore) Observar(ahora time.Time) ResultadoZScore {
@@ -49,7 +45,6 @@ func (p *PerfilZScore) ObservarConPeso(ahora time.Time, peso float64) ResultadoZ
 	if p.inicioVentana.IsZero() {
 		p.inicioVentana = ahora
 	}
-
 	if peso <= 0 {
 		peso = 1
 	}
@@ -62,14 +57,12 @@ func (p *PerfilZScore) ObservarConPeso(ahora time.Time, peso float64) ResultadoZ
 
 	tasaActual := p.acumuladoVentana / transcurrido
 	resultado := p.resultadoInterno(tasaActual, true)
-
 	if transcurrido >= 1 {
 		p.agregarMuestraInterna(tasaActual, ahora)
 		p.inicioVentana = ahora
 		p.acumuladoVentana = 0
 		resultado = p.resultadoInterno(tasaActual, true)
 	}
-
 	return resultado
 }
 
@@ -97,14 +90,8 @@ func (p *PerfilZScore) resultadoInterno(ppsActual float64, evaluar bool) Resulta
 	}
 
 	return ResultadoZScore{
-		PPSActual:     ppsActual,
-		MediaPPS:      p.media,
-		DesvioPPS:     desvio,
-		UmbralPPS:     umbralPPS,
-		PuntajeZ:      puntajeZ,
-		Alerta:        alerta,
-		Muestras:      p.cantidad,
-		UltimaMuestra: p.ultimaMuestra,
+		PPSActual: ppsActual, MediaPPS: p.media, DesvioPPS: desvio, UmbralPPS: umbralPPS,
+		PuntajeZ: puntajeZ, Alerta: alerta, Muestras: p.cantidad, UltimaMuestra: p.ultimaMuestra,
 	}
 }
 
@@ -126,33 +113,4 @@ func (p *PerfilZScore) desvioInterno() float64 {
 		return 0
 	}
 	return math.Sqrt(varianza)
-}
-
-type SnapshotPerfilZScore struct {
-	Media         float64 `json:"media"`
-	M2            float64 `json:"m2"`
-	Cantidad      int     `json:"cantidad"`
-	UltimaMuestra int64   `json:"ultima_muestra"`
-}
-
-func (p *PerfilZScore) Exportar() SnapshotPerfilZScore {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	return SnapshotPerfilZScore{
-		Media:         p.media,
-		M2:            p.m2,
-		Cantidad:      p.cantidad,
-		UltimaMuestra: p.ultimaMuestra.Unix(),
-	}
-}
-
-func (p *PerfilZScore) Importar(snapshot SnapshotPerfilZScore) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	p.media = snapshot.Media
-	p.m2 = snapshot.M2
-	p.cantidad = snapshot.Cantidad
-	if snapshot.UltimaMuestra > 0 {
-		p.ultimaMuestra = time.Unix(snapshot.UltimaMuestra, 0)
-	}
 }
