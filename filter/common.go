@@ -5,6 +5,8 @@ type Packet struct {
 	SrcPort   uint16
 	DstIP     string
 	Transport string
+	Protocolo string
+	Bytes     uint32
 	DstPort   uint16
 }
 
