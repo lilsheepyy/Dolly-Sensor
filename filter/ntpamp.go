@@ -4,6 +4,9 @@ import (
 	"context"
 	"dolly-sensor/flowspec"
 	"fmt"
+	"net"
+	"sync"
+	"time"
 )
 
 const NTPAmplificationName = "ntp-amplification-guard"
@@ -35,13 +38,43 @@ var trustedNTPServers = map[string]struct{}{
 	"216.239.35.12": {},
 }
 
+var trustedUbuntuNTPHosts = []string{
+	"ntp.ubuntu.com",
+	"0.ubuntu.pool.ntp.org",
+	"1.ubuntu.pool.ntp.org",
+	"2.ubuntu.pool.ntp.org",
+	"3.ubuntu.pool.ntp.org",
+}
+
+type ntpHostResolver func(ctx context.Context, host string) ([]string, error)
+
 type NTPAmplificationFilter struct {
-	blocker flowspec.Blocker
+	blocker         flowspec.Blocker
+	resolveHost     ntpHostResolver
+	refreshInterval time.Duration
+
+	mu                 sync.RWMutex
+	dynamicTrustedIPs  map[string]struct{}
+	lastDynamicRefresh time.Time
 }
 
 func NewNTPAmplificationFilter(blocker flowspec.Blocker) *NTPAmplificationFilter {
+	return newNTPAmplificationFilter(blocker, net.DefaultResolver.LookupHost, 30*time.Minute)
+}
+
+func newNTPAmplificationFilter(blocker flowspec.Blocker, resolveHost ntpHostResolver, refreshInterval time.Duration) *NTPAmplificationFilter {
+	if resolveHost == nil {
+		resolveHost = net.DefaultResolver.LookupHost
+	}
+	if refreshInterval <= 0 {
+		refreshInterval = 30 * time.Minute
+	}
+
 	return &NTPAmplificationFilter{
-		blocker: blocker,
+		blocker:           blocker,
+		resolveHost:       resolveHost,
+		refreshInterval:   refreshInterval,
+		dynamicTrustedIPs: map[string]struct{}{},
 	}
 }
 
@@ -58,7 +91,13 @@ func (f *NTPAmplificationFilter) Evaluate(pkt Packet) Decision {
 		return decision
 	}
 
+	f.refreshDynamicTrustedIPs()
+
 	if _, ok := trustedNTPServers[pkt.SourceIP]; ok {
+		return decision
+	}
+	if f.isDynamicTrustedIP(pkt.SourceIP) {
+		decision.Reason = "source port 123 traffic matched trusted Ubuntu NTP server list"
 		return decision
 	}
 
@@ -84,4 +123,42 @@ func (f *NTPAmplificationFilter) Evaluate(pkt Packet) Decision {
 	}
 
 	return decision
+}
+
+func (f *NTPAmplificationFilter) isDynamicTrustedIP(ip string) bool {
+	f.mu.RLock()
+	defer f.mu.RUnlock()
+	_, ok := f.dynamicTrustedIPs[ip]
+	return ok
+}
+
+func (f *NTPAmplificationFilter) refreshDynamicTrustedIPs() {
+	f.mu.RLock()
+	shouldRefresh := time.Since(f.lastDynamicRefresh) >= f.refreshInterval
+	f.mu.RUnlock()
+	if !shouldRefresh {
+		return
+	}
+
+	updatedTrustedIPs := map[string]struct{}{}
+
+	for _, host := range trustedUbuntuNTPHosts {
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		addresses, err := f.resolveHost(ctx, host)
+		cancel()
+		if err != nil {
+			continue
+		}
+
+		for _, address := range addresses {
+			updatedTrustedIPs[address] = struct{}{}
+		}
+	}
+
+	f.mu.Lock()
+	if len(updatedTrustedIPs) > 0 {
+		f.dynamicTrustedIPs = updatedTrustedIPs
+	}
+	f.lastDynamicRefresh = time.Now()
+	f.mu.Unlock()
 }

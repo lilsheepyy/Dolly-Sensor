@@ -5,6 +5,7 @@ import (
 	"dolly-sensor/flowspec"
 	"net"
 	"testing"
+	"time"
 )
 
 type blockerStub struct {
@@ -92,6 +93,32 @@ func TestNTPAmplificationBlocksBySourceIPAndPort(t *testing.T) {
 	}
 	if stub.blockCalls[0].SourcePort != 123 {
 		t.Fatalf("expected source port 123, got %d", stub.blockCalls[0].SourcePort)
+	}
+}
+
+func TestNTPAmplificationAllowsUbuntuTrustedServers(t *testing.T) {
+	stub := &blockerStub{}
+	f := newNTPAmplificationFilter(
+		stub,
+		func(_ context.Context, host string) ([]string, error) {
+			if host == "ntp.ubuntu.com" {
+				return []string{"91.189.89.199"}, nil
+			}
+			return nil, nil
+		},
+		time.Hour,
+	)
+
+	decision := f.Evaluate(Packet{
+		SourceIP: "91.189.89.199",
+		SrcPort:  123,
+	})
+
+	if !decision.Allowed {
+		t.Fatalf("expected Ubuntu trusted NTP source to be allowed")
+	}
+	if len(stub.blockCalls) != 0 {
+		t.Fatalf("expected no block calls, got %d", len(stub.blockCalls))
 	}
 }
 
