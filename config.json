@@ -13,54 +13,10 @@
   "store": {
     "max_recent_packets": 4096
   },
-  "bgpflowspec": {
-    "enabled": false,
-    "command": "gobgp",
-    "max_workers": 8,
-    "queue_size": 256,
-    "args": [
-      "global",
-      "rib",
-      "add",
-      "-a",
-      "{{family}}-flowspec",
-      "match",
-      "source",
-      "{{source_prefix}}",
-      "source-port",
-      "=={{source_port}}",
-      "then",
-      "discard"
-    ],
-    "rate_limit_args": [
-      "global",
-      "rib",
-      "add",
-      "-a",
-      "{{family}}-flowspec",
-      "match",
-      "source",
-      "{{source_prefix}}",
-      "source-port",
-      "=={{source_port}}",
-      "then",
-      "rate-limit",
-      "{{rate_limit_pps}}"
-    ]
-  },
   "local": {
     "owned_cidrs": [
       "127.0.0.0/8",
       "192.168.1.0/24"
-    ]
-  },
-  "filters": {
-    "active": [
-      "ssh",
-      "dnsamp",
-      "ntpamp",
-      "ftp",
-      "inbound"
     ]
   }
 }

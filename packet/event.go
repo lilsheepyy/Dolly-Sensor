@@ -44,16 +44,15 @@ type Event struct {
 	DNSQuery           string    `json:"dnsQuery,omitempty"`
 	HTTPStartLine      string    `json:"httpStartLine,omitempty"`
 	SSHBanner          string    `json:"sshBanner,omitempty"`
-	FilterName         string    `json:"filterName,omitempty"`
-	FilterAction       string    `json:"filterAction,omitempty"`
-	FilterReason       string    `json:"filterReason,omitempty"`
-	Allowed            bool      `json:"allowed"`
 	Alert              bool      `json:"alert"`
 	AlertName          string    `json:"alertName,omitempty"`
 	AlertReason        string    `json:"alertReason,omitempty"`
 	CurrentPPS         float64   `json:"currentPPS,omitempty"`
 	BaselinePPS        float64   `json:"baselinePPS,omitempty"`
-	SpikePPS           float64   `json:"spikePPS,omitempty"`
+	DeviationPPS       float64   `json:"deviationPPS,omitempty"`
+	CurrentMbps        float64   `json:"currentMbps,omitempty"`
+	BaselineMbps       float64   `json:"baselineMbps,omitempty"`
+	DeviationMbps      float64   `json:"deviationMbps,omitempty"`
 	ProfileActive      bool      `json:"profileActive"`
 	ProfileKey         string    `json:"profileKey,omitempty"`
 	DestinationIsLocal bool      `json:"destinationIsLocal"`
@@ -80,23 +79,14 @@ func (e Event) BestProtocol() string {
 func (e Event) SummaryString() string {
 	base := fmt.Sprintf("%s sample=%d record=%d", e.SampleType, e.SampleSequence, e.RecordIndex)
 	proto := e.BestProtocol()
-
 	if e.SrcIP != "" || e.DstIP != "" {
 		addr := fmt.Sprintf("%s:%d -> %s:%d", zeroIfEmpty(e.SrcIP), e.SrcPort, zeroIfEmpty(e.DstIP), e.DstPort)
 		if e.Details != "" {
-			return fmt.Sprintf("%s %s %s %s [%s]", base, proto, addr, e.Details, e.FilterAction)
+			return fmt.Sprintf("%s %s %s %s", base, proto, addr, e.Details)
 		}
-		return fmt.Sprintf("%s %s %s [%s]", base, proto, addr, e.FilterAction)
+		return fmt.Sprintf("%s %s %s", base, proto, addr)
 	}
-
-	if e.Protocol == "ARP" {
-		if e.Details != "" {
-			return fmt.Sprintf("%s %s %s [%s]", base, e.Protocol, e.Details, e.FilterAction)
-		}
-		return fmt.Sprintf("%s %s [%s]", base, e.Protocol, e.FilterAction)
-	}
-
-	return fmt.Sprintf("%s proto=%s frameLen=%d [%s]", base, zeroIfEmpty(proto), e.FrameLength, e.FilterAction)
+	return fmt.Sprintf("%s proto=%s frameLen=%d", base, zeroIfEmpty(proto), e.FrameLength)
 }
 
 func zeroIfEmpty(v string) string {
