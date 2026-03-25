@@ -51,13 +51,15 @@ func (s *Store) Unsubscribe(ch chan packet.Event) {
 	delete(s.clients, ch)
 }
 
-func (s *Store) Add(pkt packet.Event) {
+func (s *Store) Add(pkt packet.Event) bool {
 	s.mu.Lock()
 	s.nextID++
 	pkt.ID = s.nextID
 
+	seDescarto := false
 	if len(s.packets) == cap(s.packets) {
 		s.dropped++
+		seDescarto = true
 		copy(s.packets, s.packets[1:])
 		s.packets[len(s.packets)-1] = pkt
 	} else {
@@ -76,6 +78,8 @@ func (s *Store) Add(pkt packet.Event) {
 		default:
 		}
 	}
+
+	return seDescarto
 }
 
 func (s *Store) Stats() Stats {
