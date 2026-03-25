@@ -210,6 +210,8 @@ h1 {
 .summary-row strong {
   font-family: "IBM Plex Mono", monospace;
   font-size: 1rem;
+  text-align: right;
+  overflow-wrap: anywhere;
 }
 
 .legend {
