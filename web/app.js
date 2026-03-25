@@ -1,26 +1,39 @@
-const packetCount = document.querySelector("#packet-count");
-const streamState = document.querySelector("#stream-state");
-const emptyState = document.querySelector("#empty-state");
-const collectorAddr = document.querySelector("#collector-addr");
-const frontendAddr = document.querySelector("#frontend-addr");
-const filterName = document.querySelector("#filter-name");
-const blockedCount = document.querySelector("#blocked-count");
-const droppedCount = document.querySelector("#dropped-count");
-const sshPps = document.querySelector("#ssh-pps");
-const sshAlert = document.querySelector("#ssh-alert");
-const sshProfileKey = document.querySelector("#ssh-profile-key");
-const protocolCount = document.querySelector("#protocol-count");
-const dominantProtocol = document.querySelector("#dominant-protocol");
-const topProtocol = document.querySelector("#top-protocol");
-const topProtocolShare = document.querySelector("#top-protocol-share");
-const protocolChart = document.querySelector("#protocol-chart");
-const protocolLegend = document.querySelector("#protocol-legend");
+const contadorPaquetes = document.querySelector("#packet-count");
+const estadoFlujo = document.querySelector("#stream-state");
+const estadoVacio = document.querySelector("#empty-state");
+const direccionCollector = document.querySelector("#collector-addr");
+const direccionFrontend = document.querySelector("#frontend-addr");
+const nombreFiltro = document.querySelector("#filter-name");
+const contadorBloqueados = document.querySelector("#blocked-count");
+const contadorDescartados = document.querySelector("#dropped-count");
+const contadorProtocolos = document.querySelector("#protocol-count");
+const protocoloDominante = document.querySelector("#dominant-protocol");
+const protocoloTop = document.querySelector("#top-protocol");
+const porcentajeTop = document.querySelector("#top-protocol-share");
+const graficoProtocolos = document.querySelector("#protocol-chart");
+const leyendaProtocolos = document.querySelector("#protocol-legend");
 
-const seenPacketIDs = new Set();
-const protocolTotals = new Map();
-let blockedTotal = 0;
-let latestSSHProfile = null;
-const chartColors = [
+const totalEventosInbound = document.querySelector("#inbound-events");
+const totalAlertasInbound = document.querySelector("#inbound-alert-count");
+const ppsActualInbound = document.querySelector("#inbound-current-pps");
+const ppsBaseInbound = document.querySelector("#inbound-baseline-pps");
+const ppsSpikeInbound = document.querySelector("#inbound-spike-pps");
+const perfilActivoInbound = document.querySelector("#inbound-profile-active");
+const perfilClaveInbound = document.querySelector("#inbound-profile-key");
+const destinoLocalInbound = document.querySelector("#inbound-destination-local");
+const banderaAlertaInbound = document.querySelector("#inbound-alert-flag");
+const nombreAlertaInbound = document.querySelector("#inbound-alert-name");
+const razonAlertaInbound = document.querySelector("#inbound-alert-reason");
+const razonFiltroInbound = document.querySelector("#inbound-filter-reason");
+
+const idsVistos = new Set();
+const totalesProtocolo = new Map();
+let totalBloqueados = 0;
+let eventosInbound = 0;
+let alertasInbound = 0;
+let ultimoInbound = null;
+
+const coloresGrafico = [
   "#7EE0C6",
   "#45B4FF",
   "#FFB36D",
@@ -33,155 +46,174 @@ const chartColors = [
   "#F472B6",
 ];
 
-boot();
+iniciar();
 
-async function boot() {
-  await loadConfig();
-  await loadInitialPackets();
-  await loadStats();
-  openStream();
-  window.setInterval(loadStats, 2000);
-  renderProtocolChart();
+async function iniciar() {
+  await cargarConfiguracion();
+  await cargarPaquetesIniciales();
+  await cargarEstadisticas();
+  abrirStream();
+  window.setInterval(cargarEstadisticas, 2000);
+  renderizarGraficoProtocolos();
+  renderizarDatosInbound();
 }
 
-async function loadConfig() {
-  const response = await fetch("/api/config");
-  const cfg = await response.json();
-  collectorAddr.textContent = cfg.collectorAddr || "-";
-  frontendAddr.textContent = cfg.frontendAddr || "-";
-  filterName.textContent = cfg.activeFilters || "-";
+async function cargarConfiguracion() {
+  const respuesta = await fetch("/api/config");
+  const configuracion = await respuesta.json();
+  direccionCollector.textContent = configuracion.collectorAddr || "-";
+  direccionFrontend.textContent = configuracion.frontendAddr || "-";
+  nombreFiltro.textContent = configuracion.activeFilters || "-";
 }
 
-async function loadInitialPackets() {
-  const response = await fetch("/api/packets");
-  const packets = await response.json();
-  packets.forEach(registerPacket);
+async function cargarPaquetesIniciales() {
+  const respuesta = await fetch("/api/packets");
+  const paquetes = await respuesta.json();
+  paquetes.forEach(registrarPaquete);
 }
 
-async function loadStats() {
-  const response = await fetch("/api/stats");
-  const stats = await response.json();
-  droppedCount.textContent = String(stats.dropped || 0);
+async function cargarEstadisticas() {
+  const respuesta = await fetch("/api/stats");
+  const estadisticas = await respuesta.json();
+  contadorDescartados.textContent = String(estadisticas.dropped || 0);
 }
 
-function openStream() {
-  const events = new EventSource("/api/events");
+function abrirStream() {
+  const eventos = new EventSource("/api/events");
 
-  events.onopen = () => {
-    streamState.textContent = "live";
+  eventos.onopen = () => {
+    estadoFlujo.textContent = "live";
   };
 
-  events.onmessage = (event) => {
-    registerPacket(JSON.parse(event.data));
+  eventos.onmessage = (evento) => {
+    registrarPaquete(JSON.parse(evento.data));
   };
 
-  events.onerror = () => {
-    streamState.textContent = "reconnecting";
+  eventos.onerror = () => {
+    estadoFlujo.textContent = "reconnecting";
   };
 }
 
-function registerPacket(packet) {
-  if (seenPacketIDs.has(packet.id)) {
+function registrarPaquete(paquete) {
+  if (idsVistos.has(paquete.id)) {
     return;
   }
 
-  seenPacketIDs.add(packet.id);
+  idsVistos.add(paquete.id);
 
-  const protocol = packet.protocol || packet.transport || packet.network || "Unknown";
-  protocolTotals.set(protocol, (protocolTotals.get(protocol) || 0) + 1);
+  const protocolo = paquete.protocol || paquete.transport || paquete.network || "Unknown";
+  totalesProtocolo.set(protocolo, (totalesProtocolo.get(protocolo) || 0) + 1);
 
-  if (packet.filterAction === "blocked") {
-    blockedTotal += 1;
+  if (paquete.filterAction === "blocked") {
+    totalBloqueados += 1;
   }
 
-  if (packet.profileActive) {
-    latestSSHProfile = packet;
+  if (paquete.profileActive || paquete.filterName === "inbound-global-profile") {
+    eventosInbound += 1;
+    ultimoInbound = paquete;
+
+    if (paquete.alert) {
+      alertasInbound += 1;
+    }
   }
 
-  renderProtocolChart();
+  renderizarGraficoProtocolos();
+  renderizarDatosInbound();
 }
 
-function renderProtocolChart() {
-  const entries = [...protocolTotals.entries()]
+function renderizarGraficoProtocolos() {
+  const entradas = [...totalesProtocolo.entries()]
     .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
-  const total = entries.reduce((sum, [, count]) => sum + count, 0);
+  const total = entradas.reduce((suma, [, conteo]) => suma + conteo, 0);
 
-  packetCount.textContent = String(total);
-  protocolCount.textContent = String(entries.length);
-  blockedCount.textContent = String(blockedTotal);
-  renderSSHProfile();
-  emptyState.hidden = total > 0;
+  contadorPaquetes.textContent = String(total);
+  contadorProtocolos.textContent = String(entradas.length);
+  contadorBloqueados.textContent = String(totalBloqueados);
+  estadoVacio.hidden = total > 0;
 
   if (total === 0) {
-    dominantProtocol.textContent = "-";
-    topProtocol.textContent = "-";
-    topProtocolShare.textContent = "0%";
-    protocolLegend.replaceChildren();
-    protocolChart.style.background =
+    protocoloDominante.textContent = "-";
+    protocoloTop.textContent = "-";
+    porcentajeTop.textContent = "0%";
+    leyendaProtocolos.replaceChildren();
+    graficoProtocolos.style.background =
       "radial-gradient(circle at center, rgba(8, 17, 31, 0.98) 0 34%, transparent 35% 100%), conic-gradient(from -90deg, rgba(125, 169, 255, 0.18) 0 100%)";
     return;
   }
 
-  const [winnerName, winnerCount] = entries[0];
-  const winnerShare = Math.round((winnerCount / total) * 1000) / 10;
-  dominantProtocol.textContent = winnerName;
-  topProtocol.textContent = winnerName;
-  topProtocolShare.textContent = `${winnerShare}%`;
+  const [ganadorNombre, ganadorConteo] = entradas[0];
+  const ganadorPorcentaje = Math.round((ganadorConteo / total) * 1000) / 10;
+  protocoloDominante.textContent = ganadorNombre;
+  protocoloTop.textContent = ganadorNombre;
+  porcentajeTop.textContent = `${ganadorPorcentaje}%`;
 
-  const segments = [];
-  let current = 0;
+  const segmentos = [];
+  let porcentajeActual = 0;
 
-  entries.forEach(([name, count], index) => {
-    const color = chartColors[index % chartColors.length];
-    const next = current + (count / total) * 100;
-    segments.push(`${color} ${current}% ${next}%`);
-    current = next;
+  entradas.forEach(([nombre, conteo], indice) => {
+    const color = coloresGrafico[indice % coloresGrafico.length];
+    const siguientePorcentaje = porcentajeActual + (conteo / total) * 100;
+    segmentos.push(`${color} ${porcentajeActual}% ${siguientePorcentaje}%`);
+    porcentajeActual = siguientePorcentaje;
   });
 
-  protocolChart.style.background =
-    `radial-gradient(circle at center, rgba(8, 17, 31, 0.98) 0 34%, transparent 35% 100%), conic-gradient(from -90deg, ${segments.join(", ")})`;
+  graficoProtocolos.style.background =
+    `radial-gradient(circle at center, rgba(8, 17, 31, 0.98) 0 34%, transparent 35% 100%), conic-gradient(from -90deg, ${segmentos.join(", ")})`;
 
-  const items = entries.map(([name, count], index) => {
-    const share = Math.round((count / total) * 1000) / 10;
-    const color = chartColors[index % chartColors.length];
+  const filas = entradas.map(([nombre, conteo], indice) => {
+    const porcentaje = Math.round((conteo / total) * 1000) / 10;
+    const color = coloresGrafico[indice % coloresGrafico.length];
 
-    const row = document.createElement("div");
-    row.className = "legend-item";
-    row.innerHTML = [
+    const fila = document.createElement("div");
+    fila.className = "legend-item";
+    fila.innerHTML = [
       `<span class="legend-color" style="background:${color}"></span>`,
-      `<span class="legend-name">${escapeHtml(name)}</span>`,
-      `<span class="legend-count">${count}</span>`,
-      `<span class="legend-share">${share}%</span>`,
+      `<span class="legend-name">${escaparHtml(nombre)}</span>`,
+      `<span class="legend-count">${conteo}</span>`,
+      `<span class="legend-share">${porcentaje}%</span>`,
     ].join("");
-    return row;
+    return fila;
   });
 
-  protocolLegend.replaceChildren(...items);
+  leyendaProtocolos.replaceChildren(...filas);
 }
 
-function renderSSHProfile() {
-  if (!latestSSHProfile) {
-    sshPps.textContent = "0.0";
-    sshAlert.textContent = "normal";
-    sshProfileKey.textContent = "-";
+function renderizarDatosInbound() {
+  totalEventosInbound.textContent = String(eventosInbound);
+  totalAlertasInbound.textContent = String(alertasInbound);
+
+  if (!ultimoInbound) {
+    ppsActualInbound.textContent = "0.0";
+    ppsBaseInbound.textContent = "0.0";
+    ppsSpikeInbound.textContent = "0.0";
+    perfilActivoInbound.textContent = "false";
+    perfilClaveInbound.textContent = "-";
+    destinoLocalInbound.textContent = "false";
+    banderaAlertaInbound.textContent = "false";
+    nombreAlertaInbound.textContent = "-";
+    razonAlertaInbound.textContent = "-";
+    razonFiltroInbound.textContent = "-";
     return;
   }
 
-  sshPps.textContent = `${formatRate(latestSSHProfile.currentPPS)} pps`;
-  sshProfileKey.textContent = latestSSHProfile.destinationIsLocal ? (latestSSHProfile.profileKey || "-") : "external dst";
-  if (latestSSHProfile.alert) {
-    sshAlert.textContent = `ddos suspected (${formatRate(latestSSHProfile.baselinePPS)} -> ${formatRate(latestSSHProfile.currentPPS)})`;
-  } else {
-    sshAlert.textContent = `normal (${formatRate(latestSSHProfile.baselinePPS)} baseline)`;
-  }
+  ppsActualInbound.textContent = formatearTasa(ultimoInbound.currentPPS);
+  ppsBaseInbound.textContent = formatearTasa(ultimoInbound.baselinePPS);
+  ppsSpikeInbound.textContent = formatearTasa(ultimoInbound.spikePPS);
+  perfilActivoInbound.textContent = String(Boolean(ultimoInbound.profileActive));
+  perfilClaveInbound.textContent = ultimoInbound.profileKey || "-";
+  destinoLocalInbound.textContent = String(Boolean(ultimoInbound.destinationIsLocal));
+  banderaAlertaInbound.textContent = String(Boolean(ultimoInbound.alert));
+  nombreAlertaInbound.textContent = ultimoInbound.alertName || "-";
+  razonAlertaInbound.textContent = ultimoInbound.alertReason || "-";
+  razonFiltroInbound.textContent = ultimoInbound.filterReason || "-";
 }
 
-function formatRate(value) {
-  return Number(value || 0).toFixed(1);
+function formatearTasa(valor) {
+  return Number(valor || 0).toFixed(1);
 }
 
-function escapeHtml(value) {
-  return String(value)
+function escaparHtml(valor) {
+  return String(valor)
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;");

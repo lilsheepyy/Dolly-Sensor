@@ -11,8 +11,8 @@
     <section class="hero">
       <div>
         <p class="eyebrow">sFlow FLOWSAMPLE Inspector</p>
-        <h1>Inner packets carried by sFlow raw packet header records</h1>
-        <p class="subtitle">Live view of the packet bytes wrapped inside `FLOWSAMPLE` records, not the outer UDP datagram sent to the collector.</p>
+        <h1>Inbound visibility from inbound.go profiling</h1>
+        <p class="subtitle">Live dashboard focused on every inbound profiling signal emitted by the global inbound filter (profile state, PPS metrics, and alert context).</p>
       </div>
       <div class="stats">
         <div class="stat">
@@ -44,24 +44,32 @@
           <strong id="dropped-count">0</strong>
         </div>
         <div class="stat">
-          <span class="label">SSH PPS</span>
-          <strong id="ssh-pps">0.0</strong>
+          <span class="label">Inbound Events</span>
+          <strong id="inbound-events">0</strong>
         </div>
         <div class="stat">
-          <span class="label">SSH Alert</span>
-          <strong id="ssh-alert">normal</strong>
+          <span class="label">Inbound Alerts</span>
+          <strong id="inbound-alert-count">0</strong>
         </div>
         <div class="stat">
-          <span class="label">SSH Profile</span>
-          <strong id="ssh-profile-key">-</strong>
+          <span class="label">Current PPS</span>
+          <strong id="inbound-current-pps">0.0</strong>
+        </div>
+        <div class="stat">
+          <span class="label">Baseline PPS</span>
+          <strong id="inbound-baseline-pps">0.0</strong>
+        </div>
+        <div class="stat">
+          <span class="label">Spike Threshold</span>
+          <strong id="inbound-spike-pps">0.0</strong>
         </div>
       </div>
     </section>
 
     <section class="panel">
       <div class="panel-head">
-        <h2>Protocol split</h2>
-        <p>Counts are grouped by the protocol decoded from the packet carried inside each sFlow raw packet header record.</p>
+        <h2>Inbound profile status</h2>
+        <p>All fields below are sourced from packet events generated after inbound.go evaluation.</p>
       </div>
       <div id="empty-state" class="empty">Waiting for packets. Start `go run .` and send sFlow to the configured collector address.</div>
       <div class="chart-layout">
@@ -81,6 +89,34 @@
           <div class="summary-row">
             <span class="summary-label">Most Common</span>
             <strong id="dominant-protocol">-</strong>
+          </div>
+          <div class="summary-row">
+            <span class="summary-label">Profile Active</span>
+            <strong id="inbound-profile-active">false</strong>
+          </div>
+          <div class="summary-row">
+            <span class="summary-label">Profile Key</span>
+            <strong id="inbound-profile-key">-</strong>
+          </div>
+          <div class="summary-row">
+            <span class="summary-label">Destination Is Local</span>
+            <strong id="inbound-destination-local">false</strong>
+          </div>
+          <div class="summary-row">
+            <span class="summary-label">Alert</span>
+            <strong id="inbound-alert-flag">false</strong>
+          </div>
+          <div class="summary-row">
+            <span class="summary-label">Alert Name</span>
+            <strong id="inbound-alert-name">-</strong>
+          </div>
+          <div class="summary-row">
+            <span class="summary-label">Alert Reason</span>
+            <strong id="inbound-alert-reason">-</strong>
+          </div>
+          <div class="summary-row">
+            <span class="summary-label">Filter Reason</span>
+            <strong id="inbound-filter-reason">-</strong>
           </div>
           <div id="protocol-legend" class="legend"></div>
         </section>
