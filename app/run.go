@@ -49,18 +49,23 @@ func Run() error {
 	}
 
 	packetStore := store.New(cfg.Store.MaxRecentPackets)
-	activeFilters, err := buildFilters(cfg.Filters.Active, blocker, ownedNets)
+	activeFilters, inboundFilter, err := buildFilters(cfg.Filters.Active, blocker, ownedNets)
 	if err != nil {
 		return err
 	}
 	processor := sflow.NewProcessor(packetStore, activeFilters, ownedNets)
 
+	runtime := dashboard.RuntimeConfig{
+		CollectorAddr: cfg.CollectorAddr(),
+		FrontendAddr:  cfg.HTTP.Listen,
+		ActiveFilters: cfg.Filters.Active,
+	}
+	if inboundFilter != nil {
+		runtime.ObtenerPerfiles = inboundFilter.SnapshotPerfiles
+	}
+
 	go func() {
-		if err := dashboard.Run(cfg.HTTP.Listen, "web", packetStore, dashboard.RuntimeConfig{
-			CollectorAddr: cfg.CollectorAddr(),
-			FrontendAddr:  cfg.HTTP.Listen,
-			ActiveFilters: cfg.Filters.Active,
-		}); err != nil {
+		if err := dashboard.Run(cfg.HTTP.Listen, "web", packetStore, runtime); err != nil {
 			log.Fatalf("dashboard: %v", err)
 		}
 	}()
@@ -68,8 +73,9 @@ func Run() error {
 	return sflow.Listen(cfg.CollectorAddr(), processor)
 }
 
-func buildFilters(names []string, blocker flowspec.Blocker, ownedNets []*net.IPNet) ([]filter.Evaluator, error) {
+func buildFilters(names []string, blocker flowspec.Blocker, ownedNets []*net.IPNet) ([]filter.Evaluator, *filter.InboundFilter, error) {
 	filters := make([]filter.Evaluator, 0, len(names))
+	var inbound *filter.InboundFilter
 
 	for _, name := range names {
 		switch name {
@@ -82,11 +88,12 @@ func buildFilters(names []string, blocker flowspec.Blocker, ownedNets []*net.IPN
 		case "ftp":
 			filters = append(filters, filter.NewFTPPort21Inbound(blocker))
 		case "inbound":
-			filters = append(filters, filter.NewInboundGlobalFilter(ownedNets))
+			inbound = filter.NewInboundGlobalFilter(ownedNets)
+			filters = append(filters, inbound)
 		default:
-			return nil, fmt.Errorf("unknown filter %q", name)
+			return nil, nil, fmt.Errorf("unknown filter %q", name)
 		}
 	}
 
-	return filters, nil
+	return filters, inbound, nil
 }

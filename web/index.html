@@ -10,116 +10,44 @@
   <main class="layout">
     <section class="hero">
       <div>
-        <p class="eyebrow">sFlow FLOWSAMPLE Inspector</p>
-        <h1>Inbound visibility from inbound.go profiling</h1>
-        <p class="subtitle">Live dashboard focused on every inbound profiling signal emitted by the global inbound filter (profile state, PPS metrics, and alert context).</p>
+        <p class="eyebrow">sFlow collector</p>
+        <h1>DDoS inbound global profile</h1>
+        <p class="subtitle">Collector listens on 127.0.0.1:6343 and builds baseline per owned destination IP with PPS/mbps averages, deviations, protocols and alert signals.</p>
       </div>
       <div class="stats">
-        <div class="stat">
-          <span class="label">Collector</span>
-          <strong id="collector-addr">-</strong>
-        </div>
-        <div class="stat">
-          <span class="label">Frontend</span>
-          <strong id="frontend-addr">-</strong>
-        </div>
-        <div class="stat">
-          <span class="label">Packets Seen</span>
-          <strong id="packet-count">0</strong>
-        </div>
-        <div class="stat">
-          <span class="label">Stream</span>
-          <strong id="stream-state">connecting</strong>
-        </div>
-        <div class="stat">
-          <span class="label">Filter</span>
-          <strong id="filter-name">-</strong>
-        </div>
-        <div class="stat">
-          <span class="label">Blocked Packets</span>
-          <strong id="blocked-count">0</strong>
-        </div>
-        <div class="stat">
-          <span class="label">Dropped Events</span>
-          <strong id="dropped-count">0</strong>
-        </div>
-        <div class="stat">
-          <span class="label">Inbound Events</span>
-          <strong id="inbound-events">0</strong>
-        </div>
-        <div class="stat">
-          <span class="label">Inbound Alerts</span>
-          <strong id="inbound-alert-count">0</strong>
-        </div>
-        <div class="stat">
-          <span class="label">Current PPS</span>
-          <strong id="inbound-current-pps">0.0</strong>
-        </div>
-        <div class="stat">
-          <span class="label">Baseline PPS</span>
-          <strong id="inbound-baseline-pps">0.0</strong>
-        </div>
-        <div class="stat">
-          <span class="label">Spike Threshold</span>
-          <strong id="inbound-spike-pps">0.0</strong>
-        </div>
+        <div class="stat"><span class="label">Collector</span><strong id="collector-addr">-</strong></div>
+        <div class="stat"><span class="label">Frontend</span><strong id="frontend-addr">-</strong></div>
+        <div class="stat"><span class="label">Packets Seen</span><strong id="packet-count">0</strong></div>
+        <div class="stat"><span class="label">Stream</span><strong id="stream-state">connecting</strong></div>
+        <div class="stat"><span class="label">Filter</span><strong id="filter-name">-</strong></div>
+        <div class="stat"><span class="label">Blocked</span><strong id="blocked-count">0</strong></div>
+        <div class="stat"><span class="label">Inbound Alerts</span><strong id="inbound-alert-count">0</strong></div>
+        <div class="stat"><span class="label">Dropped Events</span><strong id="dropped-count">0</strong></div>
       </div>
     </section>
 
     <section class="panel">
       <div class="panel-head">
-        <h2>Inbound profile status</h2>
-        <p>All fields below are sourced from packet events generated after inbound.go evaluation.</p>
+        <h2>Global profile per owned destination IP</h2>
+        <p>Values are learned from sFlow packet headers decoded in real time.</p>
       </div>
-      <div id="empty-state" class="empty">Waiting for packets. Start `go run .` and send sFlow to the configured collector address.</div>
-      <div class="chart-layout">
-        <section class="chart-panel">
-          <div id="protocol-chart" class="chart" aria-label="Protocol distribution chart"></div>
-          <div class="chart-center">
-            <span class="chart-label">Top Protocol</span>
-            <strong id="top-protocol">-</strong>
-            <span id="top-protocol-share" class="chart-share">0%</span>
-          </div>
-        </section>
-        <section class="summary-panel">
-          <div class="summary-row">
-            <span class="summary-label">Protocols Seen</span>
-            <strong id="protocol-count">0</strong>
-          </div>
-          <div class="summary-row">
-            <span class="summary-label">Most Common</span>
-            <strong id="dominant-protocol">-</strong>
-          </div>
-          <div class="summary-row">
-            <span class="summary-label">Profile Active</span>
-            <strong id="inbound-profile-active">false</strong>
-          </div>
-          <div class="summary-row">
-            <span class="summary-label">Profile Key</span>
-            <strong id="inbound-profile-key">-</strong>
-          </div>
-          <div class="summary-row">
-            <span class="summary-label">Destination Is Local</span>
-            <strong id="inbound-destination-local">false</strong>
-          </div>
-          <div class="summary-row">
-            <span class="summary-label">Alert</span>
-            <strong id="inbound-alert-flag">false</strong>
-          </div>
-          <div class="summary-row">
-            <span class="summary-label">Alert Name</span>
-            <strong id="inbound-alert-name">-</strong>
-          </div>
-          <div class="summary-row">
-            <span class="summary-label">Alert Reason</span>
-            <strong id="inbound-alert-reason">-</strong>
-          </div>
-          <div class="summary-row">
-            <span class="summary-label">Filter Reason</span>
-            <strong id="inbound-filter-reason">-</strong>
-          </div>
-          <div id="protocol-legend" class="legend"></div>
-        </section>
+      <div id="empty-state" class="empty">Waiting for packets. Start <code>go run .</code> and send sFlow datagrams to 127.0.0.1:6343.</div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>IP destino</th>
+              <th>Avg Mbps</th>
+              <th>Dev Mbps</th>
+              <th>Avg PPS</th>
+              <th>Dev PPS</th>
+              <th>Samples</th>
+              <th>Top protocols</th>
+              <th>Last sample</th>
+            </tr>
+          </thead>
+          <tbody id="profiles-body"></tbody>
+        </table>
       </div>
     </section>
   </main>

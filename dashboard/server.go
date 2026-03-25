@@ -1,6 +1,7 @@
 package dashboard
 
 import (
+	"dolly-sensor/filter"
 	"dolly-sensor/packet"
 	"dolly-sensor/store"
 	"encoding/json"
@@ -10,9 +11,10 @@ import (
 )
 
 type RuntimeConfig struct {
-	CollectorAddr string
-	FrontendAddr  string
-	ActiveFilters []string
+	CollectorAddr   string
+	FrontendAddr    string
+	ActiveFilters   []string
+	ObtenerPerfiles func() []filter.PerfilGlobalIP
 }
 
 type statusResponse struct {
@@ -28,6 +30,7 @@ func Run(listenAddr, staticDir string, packetStore *store.Store, runtime Runtime
 	mux.HandleFunc("/api/packets", handlePackets(packetStore))
 	mux.HandleFunc("/api/stats", handleStats(packetStore))
 	mux.HandleFunc("/api/events", handleEvents(packetStore))
+	mux.HandleFunc("/api/perfiles", handlePerfiles(runtime))
 
 	return http.ListenAndServe(listenAddr, mux)
 }
@@ -74,6 +77,24 @@ func handleStats(packetStore *store.Store) http.HandlerFunc {
 
 		w.Header().Set("Content-Type", "application/json")
 		if err := json.NewEncoder(w).Encode(packetStore.Stats()); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+	}
+}
+
+func handlePerfiles(runtime RuntimeConfig) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		if runtime.ObtenerPerfiles == nil {
+			http.Error(w, "inbound profiles unavailable", http.StatusNotImplemented)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(runtime.ObtenerPerfiles()); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 	}
