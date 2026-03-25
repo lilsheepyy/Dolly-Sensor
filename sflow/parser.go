@@ -88,27 +88,14 @@ func (p *Processor) ParseDatagram(remote *net.UDPAddr, pkt []byte) {
 		return
 	}
 
-	log.Printf(
-		"sFlow datagram remote=%s agent=%s seq=%d uptime=%s subAgent=%d samples=%d size=%dB",
-		remote,
-		agentIP,
-		sequenceNumber,
-		time.Duration(uptimeMS)*time.Millisecond,
-		subAgentID,
-		sampleCount,
-		len(pkt),
-	)
-
 	for i := uint32(0); i < sampleCount; i++ {
 		if err := p.parseSample(&d, i, remote.String(), agentIP, sequenceNumber); err != nil {
 			log.Printf("sample %d parse error: %v", i+1, err)
 			return
 		}
 	}
-
-	if d.remaining() > 0 {
-		log.Printf("datagram seq=%d has %d trailing bytes", sequenceNumber, d.remaining())
-	}
+	_ = subAgentID
+	_ = uptimeMS
 }
 
 func (p *Processor) parseSample(d *decoder, index uint32, remoteAddr, agentIP string, datagramSequence uint32) error {
@@ -274,34 +261,59 @@ func (p *Processor) parseFlowSample(body []byte, expanded bool, remoteAddr, agen
 		}
 
 		foundPackets++
-		p.store.Add(pkt)
+		if seDescarto := p.store.Add(pkt); seDescarto {
+			stats := p.store.Stats()
+			log.Printf(
+				"dropped event reason=store_capacity sampleSeq=%d record=%d src=%s:%d dst=%s:%d proto=%s capacity=%d",
+				pkt.SampleSequence,
+				pkt.RecordIndex,
+				zeroIfEmpty(pkt.SrcIP),
+				pkt.SrcPort,
+				zeroIfEmpty(pkt.DstIP),
+				pkt.DstPort,
+				pkt.BestProtocol(),
+				stats.Capacity,
+			)
+		}
+		p.logBlockedPacket(pkt)
+	}
+
+	if info.Drops > 0 {
 		log.Printf(
-			"inner packet sampleSeq=%d record=%d src=%s:%d dst=%s:%d proto=%s",
-			pkt.SampleSequence,
-			pkt.RecordIndex,
-			zeroIfEmpty(pkt.SrcIP),
-			pkt.SrcPort,
-			zeroIfEmpty(pkt.DstIP),
-			pkt.DstPort,
-			pkt.BestProtocol(),
+			"dropped event reason=sflow_sampler_drops sampleType=%s sampleSeq=%d source=%s drops=%d rate=%d pool=%d in=%s out=%s records=%d innerPackets=%d",
+			info.SampleType,
+			info.SampleSequence,
+			info.SourceID,
+			info.Drops,
+			info.SamplingRate,
+			info.SamplePool,
+			info.Input,
+			info.Output,
+			recordCount,
+			foundPackets,
 		)
 	}
 
-	log.Printf(
-		"%s seq=%d source=%s rate=%d pool=%d drops=%d in=%s out=%s records=%d innerPackets=%d",
-		info.SampleType,
-		info.SampleSequence,
-		info.SourceID,
-		info.SamplingRate,
-		info.SamplePool,
-		info.Drops,
-		info.Input,
-		info.Output,
-		recordCount,
-		foundPackets,
-	)
-
 	return nil
+}
+
+func (p *Processor) logBlockedPacket(pkt packet.Event) {
+	if pkt.Allowed {
+		return
+	}
+
+	log.Printf(
+		"blocked packet src=%s:%d dst=%s:%d proto=%s filter=%s reason=%s alert=%t alertName=%s",
+		zeroIfEmpty(pkt.SrcIP),
+		pkt.SrcPort,
+		zeroIfEmpty(pkt.DstIP),
+		pkt.DstPort,
+		pkt.BestProtocol(),
+		zeroIfEmpty(pkt.FilterName),
+		zeroIfEmpty(pkt.FilterReason),
+		pkt.Alert,
+		zeroIfEmpty(pkt.AlertName),
+	)
 }
 
 func (p *Processor) isInbound(pkt packet.Event) bool {
