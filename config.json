@@ -56,10 +56,6 @@
   },
   "filters": {
     "active": [
-      "ssh",
-      "dnsamp",
-      "ntpamp",
-      "ftp",
       "inbound"
     ]
   }

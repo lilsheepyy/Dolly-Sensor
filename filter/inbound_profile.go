@@ -57,6 +57,14 @@ func (p *PerfilInbound) Observar(ahora time.Time, bytes uint32, protocolo string
 	}
 }
 
+func (p *PerfilInbound) Resumen() ResultadoPerfilInbound {
+	return ResultadoPerfilInbound{
+		PPS:        p.perfilPPS.Resumen(),
+		Mbps:       p.perfilMbps.Resumen(),
+		Protocolos: p.topProtocolosBloqueante(5),
+	}
+}
+
 func (p *PerfilInbound) ExportarProtocolos() map[string]int {
 	p.mu.Lock()
 	defer p.mu.Unlock()
@@ -74,6 +82,12 @@ func (p *PerfilInbound) ImportarProtocolos(protocolos map[string]int) {
 	for k, v := range protocolos {
 		p.protocolos[k] = v
 	}
+}
+
+func (p *PerfilInbound) topProtocolosBloqueante(limite int) []string {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.topProtocolos(limite)
 }
 
 func (p *PerfilInbound) topProtocolos(limite int) []string {

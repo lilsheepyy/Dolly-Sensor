@@ -95,7 +95,7 @@ func Default() Config {
 			},
 		},
 		Filters: FiltersConfig{
-			Active: []string{"ssh", "dnsamp", "ntpamp", "ftp"},
+			Active: []string{"inbound"},
 		},
 	}
 }
