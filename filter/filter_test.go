@@ -94,3 +94,78 @@ func TestNTPAmplificationBlocksBySourceIPAndPort(t *testing.T) {
 		t.Fatalf("expected source port 123, got %d", stub.blockCalls[0].SourcePort)
 	}
 }
+
+func TestFTPFilterBlocksNonTCPBySourceIPOnly(t *testing.T) {
+	stub := &blockerStub{}
+	f := NewFTPPort21Inbound(stub)
+
+	decision := f.Evaluate(Packet{
+		SourceIP:  "5.5.5.5",
+		DstIP:     "192.168.1.10",
+		SrcPort:   12345,
+		DstPort:   21,
+		Transport: "UDP",
+	})
+
+	if decision.Allowed {
+		t.Fatalf("expected non-tcp ftp traffic to be blocked")
+	}
+	if len(stub.blockCalls) != 1 {
+		t.Fatalf("expected one block call, got %d", len(stub.blockCalls))
+	}
+	if stub.blockCalls[0].IncludeSourcePort {
+		t.Fatalf("ftp block should not include source port")
+	}
+}
+
+func TestFTPFilterIgnoresSourcePort21Only(t *testing.T) {
+	f := NewFTPPort21Inbound(nil)
+
+	decision := f.Evaluate(Packet{
+		SourceIP:  "5.5.5.5",
+		DstIP:     "192.168.1.10",
+		SrcPort:   21,
+		DstPort:   45000,
+		Transport: "UDP",
+	})
+
+	if !decision.Allowed {
+		t.Fatalf("expected source-port-only ftp traffic to be ignored")
+	}
+}
+
+func TestFTPFilterBlocksNonEphemeralSourcePort(t *testing.T) {
+	stub := &blockerStub{}
+	f := NewFTPPort21Inbound(stub)
+
+	decision := f.Evaluate(Packet{
+		SourceIP:  "5.5.5.5",
+		DstIP:     "192.168.1.10",
+		SrcPort:   1024,
+		DstPort:   21,
+		Transport: "TCP",
+	})
+
+	if decision.Allowed {
+		t.Fatalf("expected source port <=1024 to be blocked")
+	}
+	if len(stub.blockCalls) != 1 {
+		t.Fatalf("expected one block call, got %d", len(stub.blockCalls))
+	}
+}
+
+func TestFTPFilterAllowsTCPOnPort21WithEphemeralSourcePort(t *testing.T) {
+	f := NewFTPPort21Inbound(nil)
+
+	decision := f.Evaluate(Packet{
+		SourceIP:  "5.5.5.5",
+		DstIP:     "192.168.1.10",
+		SrcPort:   12345,
+		DstPort:   21,
+		Transport: "TCP",
+	})
+
+	if !decision.Allowed {
+		t.Fatalf("expected tcp ftp traffic with source port >1024 to be allowed")
+	}
+}

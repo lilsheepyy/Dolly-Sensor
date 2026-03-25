@@ -79,6 +79,8 @@ func buildFilters(names []string, blocker flowspec.Blocker, ownedNets []*net.IPN
 			filters = append(filters, filter.NewDNSAmplificationFilter(blocker))
 		case "ntpamp":
 			filters = append(filters, filter.NewNTPAmplificationFilter(blocker))
+		case "ftp":
+			filters = append(filters, filter.NewFTPPort21Inbound(blocker))
 		default:
 			return nil, fmt.Errorf("unknown filter %q", name)
 		}

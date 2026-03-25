@@ -15,6 +15,7 @@ It receives sFlow v5 datagrams, decodes the inner packet headers carried in `FLO
   - `ssh`
   - `dnsamp`
   - `ntpamp`
+  - `ftp`
 - Optionally issues BGP FlowSpec actions through an external CLI such as `gobgp`
 - Serves a dashboard over HTTP
 
@@ -83,7 +84,8 @@ Example:
     "active": [
       "ssh",
       "dnsamp",
-      "ntpamp"
+      "ntpamp",
+      "ftp"
     ]
   }
 }
@@ -103,6 +105,10 @@ Example:
   - applies only to packets with `src port 123`
   - trusted NTP server IPs are allowed
   - untrusted `src ip + src port 123` can be blocked
+- `ftp`
+  - applies only to incoming packets with `dst port 21`
+  - non-TCP packets to `dst port 21` are blocked by source IP
+  - packets to `dst port 21` with `src port` in `1-1024` are blocked by source IP
 
 ## Notes
 
