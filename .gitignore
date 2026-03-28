@@ -1,0 +1,30 @@
+# Binaries
+dolly-sensor
+dolly-sensor.exe
+dolly
+
+# Configuration
+config.json
+rename-me.config.json
+
+# Build folders
+dist/
+bin/
+
+# Dependency directories
+vendor/
+
+# Go workspaces
+go.work
+go.work.sum
+
+# OS files
+.DS_Store
+Thumbs.db
+*.swp
+*~
+
+# Dynamic Data (Storage)
+data/
+profiles/
+blocklists/manual.list

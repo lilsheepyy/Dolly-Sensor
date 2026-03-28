@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dolly Sensor | Network Protection</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="dark-theme">
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <div class="logo-icon"></div>
+                    <span>Dolly Sensor</span>
+                </div>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="#overview" class="nav-item active" data-view="overview">
+                    <i data-lucide="layout-dashboard"></i>
+                    <span>Overview</span>
+                </a>
+                <a href="#protected-ips" class="nav-item" data-view="protected-ips">
+                    <i data-lucide="shield"></i>
+                    <span>Protected IPs</span>
+                </a>
+                <a href="#intelligence" class="nav-item" data-view="intelligence">
+                    <i data-lucide="brain-circuit"></i>
+                    <span>Intelligence</span>
+                </a>
+                <a href="#inspector" class="nav-item" data-view="inspector">
+                    <i data-lucide="activity"></i>
+                    <span>Inspector</span>
+                </a>
+                <a href="#connections" class="nav-item" data-view="connections">
+                    <i data-lucide="link"></i>
+                    <span>Connections</span>
+                </a>
+                <a href="#blocklist" class="nav-item" data-view="blocklist">
+                    <i data-lucide="shield-x"></i>
+                    <span>Blocklist</span>
+                </a>
+                <a href="#mitigation" class="nav-item" data-view="mitigation">
+                    <i data-lucide="shield-off"></i>
+                    <span>Mitigation</span>
+                </a>
+                <div class="nav-spacer"></div>
+                <a href="#settings" class="nav-item" data-view="settings">
+                    <i data-lucide="settings"></i>
+                    <span>Settings</span>
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="status-indicator">
+                    <div class="status-dot online"></div>
+                    <span id="stream-state">Live Stream</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Top Header -->
+            <header class="top-header">
+                <div class="search-bar">
+                    <i data-lucide="search"></i>
+                    <input type="text" id="global-search" placeholder="Search by IP, port or protocol...">
+                </div>
+                <div class="header-actions">
+                    <div class="stat-pill">
+                        <span class="label">Collector:</span>
+                        <span id="collector-addr" class="value">loading...</span>
+                    </div>
+                    <button class="icon-btn" title="Refresh Data">
+                        <i data-lucide="refresh-cw"></i>
+                    </button>
+                    <div class="user-profile">
+                        <div class="avatar">Admin</div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Views Container -->
+            <div id="views">
+                
+                <!-- View: Overview -->
+                <section id="view-overview" class="view">
+                    <div class="view-header">
+                        <h1>Network Overview</h1>
+                        <p>Global real-time traffic and protection status.</p>
+                    </div>
+
+                    <!-- Global Stats Cards -->
+                    <div class="stats-grid">
+                        <div class="glass-card stat-card glow-blue">
+                            <div class="card-icon"><i data-lucide="zap"></i></div>
+                            <div class="card-content">
+                                <span class="label">Current Throughput</span>
+                                <div class="value-group">
+                                    <strong id="global-mbps">0.00</strong>
+                                    <span class="unit">Mbps</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="glass-card stat-card glow-purple">
+                            <div class="card-icon"><i data-lucide="bar-chart-3"></i></div>
+                            <div class="card-content">
+                                <span class="label">Current PPS</span>
+                                <div class="value-group">
+                                    <strong id="global-pps">0</strong>
+                                    <span class="unit">pkts/s</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="glass-card stat-card glow-green">
+                            <div class="card-icon"><i data-lucide="check-circle-2"></i></div>
+                            <div class="card-content">
+                                <span class="label">Active Targets</span>
+                                <div class="value-group">
+                                    <strong id="active-targets">0</strong>
+                                    <span class="unit">IPs</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="glass-card stat-card glow-red">
+                            <div class="card-icon"><i data-lucide="alert-triangle"></i></div>
+                            <div class="card-content">
+                                <span class="label">Active Alerts</span>
+                                <div class="value-group">
+                                    <strong id="alert-count">0</strong>
+                                    <span class="unit">Critical</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Chart Section -->
+                    <div class="content-grid">
+                        <div class="glass-card chart-section">
+                            <div class="card-header">
+                                <h3>Real-time Network Load</h3>
+                                <div class="chart-legend" id="pps-chart-legend"></div>
+                            </div>
+                            <div class="chart-wrapper">
+                                <canvas id="globalPpsChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="glass-card summary-section">
+                            <div class="card-header">
+                                <h3>Top Protected Targets</h3>
+                            </div>
+                            <div class="mini-list" id="top-targets-list">
+                                <div class="empty-state">No active traffic.</div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- View: Protected IPs -->
+                <section id="view-protected-ips" class="view" style="display: none;">
+                    <div class="view-header">
+                        <h1>Protected Destinations</h1>
+                        <p>Detailed performance metrics per owned IP.</p>
+                    </div>
+                    <div class="glass-card">
+                        <div class="table-container">
+                            <table id="profiles-table">
+                                <thead>
+                                    <tr>
+                                        <th>Destination IP</th>
+                                        <th>Current Load</th>
+                                        <th>Avg Load</th>
+                                        <th>Threat Level</th>
+                                        <th>Top Protocols</th>
+                                        <th>Last Activity</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="profiles-body">
+                                    <!-- Dynamic content -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- View: IP Detail (Dynamic) -->
+                <section id="view-ip-detail" class="view" style="display: none;">
+                    <div id="ip-detail-container">
+                        <!-- Header and Stats Grid injected here -->
+                    </div>
+
+                    <!-- NEW: IP-Specific Line Chart -->
+                    <div class="glass-card" style="margin-top: 24px;">
+                        <div class="card-header">
+                            <h3>Real-time Load History (PPS)</h3>
+                        </div>
+                        <div class="chart-wrapper" style="height: 250px;">
+                            <canvas id="ipPpsLineChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="content-grid" style="grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 24px;">
+                        <div class="glass-card">
+                            <div class="card-header"><h3>L4 Protocols</h3></div>
+                            <div class="chart-wrapper" style="height: 250px;"><canvas id="ipL4ProtoChart"></canvas></div>
+                        </div>
+                        <div class="glass-card">
+                            <div class="card-header"><h3>TCP Flags Distribution</h3></div>
+                            <div class="chart-wrapper" style="height: 250px;"><canvas id="ipFlagsChart"></canvas></div>
+                        </div>
+                        <div class="glass-card">
+                            <div class="card-header"><h3>TTL Distribution</h3></div>
+                            <div class="chart-wrapper" style="height: 250px;"><canvas id="ipTtlChart"></canvas></div>
+                        </div>
+                        <div class="glass-card">
+                            <div class="card-header"><h3>Top Target Ports</h3></div>
+                            <div class="chart-wrapper" style="height: 250px;"><canvas id="ipPortsChart"></canvas></div>
+                        </div>
+                        <div class="glass-card">
+                            <div class="card-header"><h3>Top Source IPs</h3></div>
+                            <div class="chart-wrapper" style="height: 250px;"><canvas id="ipSourcesChart"></canvas></div>
+                        </div>
+                        <div class="glass-card">
+                            <div class="card-header"><h3>Top Source Ports</h3></div>
+                            <div class="chart-wrapper" style="height: 250px;"><canvas id="ipSrcPortsChart"></canvas></div>
+                        </div>
+                    </div>
+                    <div id="ip-detail-reputation-container" style="margin-top: 24px;">
+                        <!-- Reputation table will be injected here -->
+                    </div>
+                </section>
+
+                <!-- View: Intelligence -->
+                <section id="view-intelligence" class="view" style="display: none;">
+                    <div class="view-header">
+                        <h1>Threat Intelligence</h1>
+                        <p>Historical alerts and source reputation analysis.</p>
+                    </div>
+                    <div class="content-grid">
+                        <div class="glass-card">
+                            <div class="card-header">
+                                <h3>Recent Critical Alerts</h3>
+                            </div>
+                            <div class="alert-list" id="alerts-history">
+                                <!-- Dynamic content -->
+                            </div>
+                        </div>
+                        <div class="glass-card">
+                            <div class="card-header">
+                                <h3>Top Source Reputations</h3>
+                            </div>
+                            <div class="table-container">
+                                <table class="compact">
+                                    <thead>
+                                        <tr>
+                                            <th>Source IP</th>
+                                            <th>Trust Score</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="top-reputations-body">
+                                        <!-- Dynamic content -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- View: Inspector -->
+                <section id="view-inspector" class="view" style="display: none;">
+                    <div class="view-header">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <h1>Network Inspector</h1>
+                                <p>Live stream of sampled packet events.</p>
+                            </div>
+                            <div class="actions">
+                                <button id="inspector-toggle-btn" class="primary-btn" style="background-color: var(--accent-red); display: flex; align-items: center; gap: 8px;">
+                                    <i data-lucide="pause"></i>
+                                    <span>Stop Stream</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="glass-card">
+                        <div class="table-toolbar" style="padding: 20px; border-bottom: 1px solid var(--border-color);">
+                            <div class="filters" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; width: 100%;">
+                                <div class="filter-group">
+                                    <label style="font-size: 11px; color: var(--text-secondary); display: block; margin-bottom: 4px;">Source IP</label>
+                                    <input type="text" id="inspect-src" placeholder="Any..." style="width: 100%; background: var(--bg-color); border: 1px solid var(--border-color); color: #fff; padding: 8px; border-radius: 4px; font-size: 13px;">
+                                </div>
+                                <div class="filter-group">
+                                    <label style="font-size: 11px; color: var(--text-secondary); display: block; margin-bottom: 4px;">Dest IP</label>
+                                    <input type="text" id="inspect-dst" placeholder="Any..." style="width: 100%; background: var(--bg-color); border: 1px solid var(--border-color); color: #fff; padding: 8px; border-radius: 4px; font-size: 13px;">
+                                </div>
+                                <div class="filter-group">
+                                    <label style="font-size: 11px; color: var(--text-secondary); display: block; margin-bottom: 4px;">Port (Src/Dst)</label>
+                                    <input type="text" id="inspect-port" placeholder="Any..." style="width: 100%; background: var(--bg-color); border: 1px solid var(--border-color); color: #fff; padding: 8px; border-radius: 4px; font-size: 13px;">
+                                </div>
+                                <div class="filter-group">
+                                    <label style="font-size: 11px; color: var(--text-secondary); display: block; margin-bottom: 4px;">Protocol</label>
+                                    <input type="text" id="inspect-proto" list="proto-suggestions" placeholder="e.g. SSH, DNS..." style="width: 100%; background: var(--bg-color); border: 1px solid var(--border-color); color: #fff; padding: 8px; border-radius: 4px; font-size: 13px;">
+                                    <datalist id="proto-suggestions">
+                                        <option value="TCP">
+                                        <option value="UDP">
+                                        <option value="ICMP">
+                                        <option value="SSH">
+                                        <option value="DNS">
+                                        <option value="HTTP">
+                                        <option value="ARP">
+                                        <option value="IPv4">
+                                        <option value="IPv6">
+                                    </datalist>
+                                </div>
+                                <div class="filter-group">
+                                    <label style="font-size: 11px; color: var(--text-secondary); display: block; margin-bottom: 4px;">Keyword</label>
+                                    <input type="text" id="inspect-keyword" placeholder="Search summary..." style="width: 100%; background: var(--bg-color); border: 1px solid var(--border-color); color: #fff; padding: 8px; border-radius: 4px; font-size: 13px;">
+                                </div>
+                                <div style="display: flex; align-items: flex-end;">
+                                    <button id="inspect-clear-btn" class="primary-btn" style="width: 100%; background-color: var(--border-color); font-size: 12px; padding: 8px;">Clear Table</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="table-container header-fixed" style="max-height: 60vh;">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Time</th>
+                                        <th>Source</th>
+                                        <th>Destination</th>
+                                        <th>Proto</th>
+                                        <th>Size</th>
+                                        <th>TTL</th>
+                                        <th>Flags</th>
+                                        <th>Summary</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="inspector-body">
+                                    <!-- Dynamic content -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- View: Blocklist -->
+                <section id="view-blocklist" class="view" style="display: none;">
+                    <div class="view-header">
+                        <h1>Blocklist Management</h1>
+                        <p>Manage manual IP/CIDR blocks and view loaded source files.</p>
+                    </div>
+                    <div class="content-grid">
+                        <div class="glass-card">
+                            <div class="card-header">
+                                <h3>Add Manual Block</h3>
+                            </div>
+                            <div class="mini-list" style="padding: 20px;">
+                                <div style="display: flex; flex-direction: column; gap: 15px;">
+                                    <p style="font-size: 13px; color: var(--text-secondary);">Entry will be saved to <code>manual.list</code> and triggered via BGP.</p>
+                                    <input type="text" id="new-block-entry" placeholder="IP or CIDR (e.g. 1.2.3.4 or 5.6.7.0/24)" style="background: var(--bg-color); border: 1px solid var(--border-color); color: #fff; padding: 12px; border-radius: 6px; font-family: var(--font-mono);">
+                                    <button class="primary-btn" onclick="submitManualBlock()">Add to Blocklist</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="glass-card">
+                            <div class="card-header">
+                                <h3>Source Files</h3>
+                            </div>
+                            <div class="mini-list" id="blocklist-files-list">
+                                <!-- Dynamic content -->
+                            </div>
+                        </div>
+                    </div>
+                    <div class="glass-card" style="margin-top: 24px;">
+                        <div class="card-header">
+                            <h3>Manual Trust (Whitelist)</h3>
+                        </div>
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Source IP</th>
+                                        <th>Trust Level</th>
+                                        <th>Added On</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="whitelist-body">
+                                    <!-- Dynamic content -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- View: Connections -->
+                <section id="view-connections" class="view" style="display: none;">
+                    <div class="view-header">
+                        <h1>Established Connections</h1>
+                        <p>Real-time TCP sessions established via handshake.</p>
+                    </div>
+                    <div class="glass-card">
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Source</th>
+                                        <th>Destination</th>
+                                        <th>Protocol</th>
+                                        <th>Duration</th>
+                                        <th>Last Active</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="connections-body-view">
+                                    <!-- Dynamic content -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- View: Mitigation -->
+                <section id="view-mitigation" class="view" style="display: none;">
+                    <div class="view-header">
+                        <h1>BGP Mitigation</h1>
+                        <p>Real-time BGP announcements and global blocklist management.</p>
+                    </div>
+                    <div class="stats-grid">
+                        <div class="glass-card stat-card glow-blue">
+                            <div class="card-icon"><i data-lucide="radio"></i></div>
+                            <div class="card-content">
+                                <span class="label">BGP State</span>
+                                <strong id="bgp-status">Enabled</strong>
+                            </div>
+                        </div>
+                        <div class="glass-card stat-card">
+                            <div class="card-icon"><i data-lucide="list"></i></div>
+                            <div class="card-content">
+                                <span class="label">Blocklist Entries</span>
+                                <strong id="blocklist-count">0</strong>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="content-grid">
+                        <div class="glass-card">
+                            <div class="card-header">
+                                <h3>Active BGP Announcements</h3>
+                            </div>
+                            <div class="table-container">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Prefix</th>
+                                            <th>Type</th>
+                                            <th>Community</th>
+                                            <th>Time</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="bgp-announcements-body">
+                                        <!-- Dynamic content -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="glass-card">
+                            <div class="card-header">
+                                <h3>Mitigation Controls</h3>
+                            </div>
+                            <div class="mini-list">
+                                <p style="padding: 10px; font-size: 13px; color: var(--text-secondary);">Drop your IP/CIDR lists in the <code>blocklists/</code> folder. The sensor will automatically trigger RTBH via GoBGP when a match is detected.</p>
+                                <button class="primary-btn" style="width: 100%; margin-top: 10px;" onclick="reloadBlocklists()">Reload All Lists</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Modals / Overlays -->
+    <div id="modal-overlay" class="overlay" style="display: none;" onclick="closeModal(event)">
+        <div class="modal" onclick="event.stopPropagation()">
+            <div id="modal-content">
+                <!-- Dynamic content -->
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>
