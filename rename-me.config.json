@@ -1,0 +1,60 @@
+{
+  "sflow": {
+    "sampling": 1,
+    "polling": 30,
+    "collector": {
+      "ip": "0.0.0.0",
+      "udpport": 6343
+    }
+  },
+  "http": {
+    "listen": "0.0.0.0:8080"
+  },
+  "store": {
+    "max_recent_packets": 100000
+  },
+  "performance": {
+    "shards": 64,
+    "cleanup_interval": 60,
+    "stats_ttl": 300,
+    "profiler_interval": 30
+  },
+  "local": {
+    "owned_cidrs": ["127.0.0.0/8", "192.168.1.0/24"],
+    "trusted_ips": ["1.1.1.1"]
+  },
+  "alert": {
+    "discord_webhook_url": ""
+  },
+  "detection": {
+    "sensitivity": "balanced",
+    "network_type": "home"
+  },
+  "bgp": {
+    "enabled": false,
+    "local_as": 65000,
+    "peer_ip": "192.168.1.1",
+    "peer_as": 65001,
+    "community": "65000:666",
+    "next_hop": "192.168.1.10"
+  },
+  "mitigation": {
+    "blocklist_path": "blocklists/",
+    "auto_block": true
+  },
+  "protocols_tuning": {
+    "ftp": {
+      "max_pps": 1000,
+      "ratelimit_pps": 250,
+      "block_duration": 60
+    },
+    "ftp_data": {
+      "max_pps": 5000,
+      "ratelimit_pps": 1000,
+      "block_duration": 60
+    }
+  },
+  "trust_tuning": {
+    "min_score_for_exemption": 60
+  }
+}

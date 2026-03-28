@@ -5,7 +5,7 @@ dolly
 
 # Configuration
 config.json
-rename-me.config.json
+# rename-me.config.json (Template allowed)
 
 # Build folders
 dist/
