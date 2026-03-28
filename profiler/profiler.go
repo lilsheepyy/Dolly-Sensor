@@ -342,7 +342,9 @@ func (p *Profiler) GetAllReputations() map[string]*trustscore.SourceTrust {
 		pers.RLock()
 		for srcIP, rep := range pers.ReputacionOrigenes {
 			if existing, ok := allReps[srcIP]; !ok || rep.TrustScore > existing.TrustScore {
-				allReps[srcIP] = rep
+				// Copia profunda del objeto de confianza
+				copyRep := *rep
+				allReps[srcIP] = &copyRep
 			}
 		}
 		pers.RUnlock()
@@ -351,7 +353,44 @@ func (p *Profiler) GetAllReputations() map[string]*trustscore.SourceTrust {
 }
 
 func (p *Profiler) GetProfile(ip string) *packet.PersistentProfile {
-	return p.loadPersistentProfile(ip)
+	pers := p.loadPersistentProfile(ip)
+	
+	// Crear una copia profunda para evitar "concurrent map iteration and map write"
+	pers.RLock()
+	defer pers.RUnlock()
+
+	copyPers := &packet.PersistentProfile{
+		IP:          pers.IP,
+		FirstSeen:   pers.FirstSeen,
+		LastUpdated: pers.LastUpdated,
+	}
+	copyPers.StatsHistoricas = pers.StatsHistoricas
+	copyPers.PerfilTrafico = pers.PerfilTrafico
+
+	// Copiar mapas uno a uno (Deep Copy)
+	copyPers.DistribucionFlagsTotal = make(map[string]uint64)
+	for k, v := range pers.DistribucionFlagsTotal { copyPers.DistribucionFlagsTotal[k] = v }
+
+	copyPers.ProtocolosFrecuentes = make(map[string]uint64)
+	for k, v := range pers.ProtocolosFrecuentes { copyPers.ProtocolosFrecuentes[k] = v }
+
+	copyPers.DistribucionTTL = make(map[uint8]uint64)
+	for k, v := range pers.DistribucionTTL { copyPers.DistribucionTTL[k] = v }
+
+	copyPers.PuertosFrecuentes = make(map[uint16]uint64)
+	for k, v := range pers.PuertosFrecuentes { copyPers.PuertosFrecuentes[k] = v }
+
+	copyPers.SourcePortsFrecuentes = make(map[uint16]uint64)
+	for k, v := range pers.SourcePortsFrecuentes { copyPers.SourcePortsFrecuentes[k] = v }
+
+	copyPers.ReputacionOrigenes = make(map[string]*trustscore.SourceTrust)
+	for k, v := range pers.ReputacionOrigenes {
+		// Aquí también necesitamos copiar el objeto de reputación porque el JSON encoder entrará en él
+		trust := *v
+		copyPers.ReputacionOrigenes[k] = &trust
+	}
+
+	return copyPers
 }
 
 func (p *Profiler) saveProfile(prof packet.IPProfile) {
